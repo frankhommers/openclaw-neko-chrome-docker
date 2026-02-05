@@ -1,0 +1,48 @@
+services:
+  neko:
+    image: ghcr.io/m1k1o/neko/chromium:latest
+    container_name: neko
+    restart: unless-stopped
+    shm_size: "2gb"
+    cap_add:
+      - SYS_ADMIN
+    env_file:
+      - .env
+    volumes:
+      - ./chromium.conf:/etc/neko/supervisord/chromium.conf:ro
+      - ./cdp-proxy.py:/opt/cdp-proxy.py:ro
+      - ./cdp-proxy.conf:/etc/neko/supervisord/cdp-proxy.conf:ro
+    environment:
+      # Desktop / stream
+      NEKO_DESKTOP_SCREEN: "1920x1080@30"
+
+      # WebRTC
+      NEKO_EPR: "52000-52100"
+      NEKO_ICELITE: "1"
+      NEKO_NAT1TO1: "95.217.69.126"
+
+      # Optional quality defaults
+      NEKO_CAPTURE_VIDEO_CODEC: "vp8"
+      NEKO_AUDIO: "opus"
+
+    ports:
+      - "52000-52100:52000-52100/udp"
+      - "127.0.0.1:9222:9223"   # CDP proxy (0.0.0.0:9223 → 127.0.0.1:9222)
+
+    networks:
+      - proxy
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+
+      - "traefik.http.routers.neko.rule=Host(`browser.aivy.hommers.it`)"
+      - "traefik.http.routers.neko.entrypoints=websecure"
+      - "traefik.http.routers.neko.tls=true"
+      - "traefik.http.routers.neko.tls.certresolver=letsencrypt"
+
+      - "traefik.http.services.neko.loadbalancer.server.port=8080"
+
+networks:
+  proxy:
+    external: true

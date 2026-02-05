@@ -1,0 +1,8 @@
+services:
+  headless-chrome:
+    image: chromedp/headless-shell:latest
+    container_name: headless-chrome
+    ports:
+      - "127.0.0.1:9223:9222"
+    shm_size: "2gb"
+    restart: unless-stopped
