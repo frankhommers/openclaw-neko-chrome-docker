@@ -1,0 +1,20 @@
+{
+  "DeveloperToolsAvailability": 0,
+  "AutofillAddressEnabled": false,
+  "AutofillCreditCardEnabled": false,
+  "BrowserSignin": 0,
+  "DefaultNotificationsSetting": 2,
+  "FullscreenAllowed": true,
+  "SyncDisabled": true,
+  "AutoplayAllowed": true,
+  "VideoCaptureAllowed": true,
+  "PasswordManagerEnabled": false,
+  "BookmarkBarEnabled": false,
+  "ExtensionInstallForcelist": [
+    "cjpalhdlnbpafiamejdnhcphjbkeiagm;https://clients2.google.com/service/update2/crx"
+  ],
+  "ExtensionInstallAllowlist": [
+    "cjpalhdlnbpafiamejdnhcphjbkeiagm"
+  ],
+  "ExtensionInstallBlocklist": []
+}

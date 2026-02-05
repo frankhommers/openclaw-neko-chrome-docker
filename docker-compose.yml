@@ -21,6 +21,9 @@ services:
       NEKO_CAPTURE_VIDEO_CODEC: "vp8"
       NEKO_AUDIO: "opus"
 
+    volumes:
+      - chrome-data:/home/neko/.config/google-chrome-cdp
+
     ports:
       - "52000-52100:52000-52100/udp"
       - "127.0.0.1:9222:9223"   # socat CDP proxy (container 9223 → Chrome 9222)
@@ -38,6 +41,9 @@ services:
       - "traefik.http.routers.neko.tls.certresolver=letsencrypt"
 
       - "traefik.http.services.neko.loadbalancer.server.port=8080"
+
+volumes:
+  chrome-data:
 
 networks:
   proxy:

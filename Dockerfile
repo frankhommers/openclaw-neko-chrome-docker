@@ -7,13 +7,9 @@ RUN apt-get update -qq && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Enable DevTools/CDP (Neko disables it via managed policy)
-RUN python3 -c "\
-import json; \
-src = '/etc/opt/chrome/policies/managed/policies.json'; \
-d = json.load(open(src)); \
-d['DeveloperToolsAvailability'] = 0; \
-json.dump(d, open(src, 'w'), indent=2)"
+# Replace Neko's restrictive Chrome policy with our clean one
+# (enables DevTools/CDP, keeps uBlock Origin, removes SponsorBlock)
+COPY policies.json /etc/opt/chrome/policies/managed/policies.json
 
 # Override supervisord configs
 COPY google-chrome.conf /etc/neko/supervisord/google-chrome.conf

@@ -94,11 +94,40 @@ Chrome refuses `--remote-debugging-port` with the default profile data directory
 ### Playwright version compatibility
 Playwright 1.58.1 works with Chrome 144+. The Neko base image ships 143 which does NOT work (WebSocket handshake hangs). Upgrading to latest stable via apt fixes it.
 
+### Gateway restart after container rebuild
+When the Neko container is rebuilt, Playwright's cached CDP connection goes stale. A `SIGUSR1` (hot reload) is NOT enough — you need a full gateway kill + restart:
+```bash
+kill -9 $(pgrep -xf openclaw-gateway); sleep 2; openclaw gateway start
+```
+
+## Persistent Chrome Data
+
+Chrome's user data (shortcuts, preferences, cookies, extensions state) is stored in a Docker named volume (`chrome-data`) mounted at `/home/neko/.config/google-chrome-cdp`.
+
+This means:
+- **`docker compose down` + `up`**: data persists ✅
+- **`docker compose down -v`**: data is wiped (volume deleted)
+- **Rebuild image**: data persists (volume is independent of image)
+
+### First-time setup
+
+NTP (New Tab Page) shortcuts can't be pre-seeded via Dockerfile — Chrome's NTP has its own internal state that only updates via the UI. After first deployment, add shortcuts manually via the "Add shortcut" button on the new tab page, or use browser automation (CDP). Once added, they persist in the volume.
+
+## Chrome Policy
+
+The Dockerfile replaces Neko's restrictive Chrome policy with a clean one (`policies.json`):
+
+- **DevTools/CDP enabled** (Neko disables this by default)
+- **uBlock Origin** force-installed (ad blocking)
+- **SponsorBlock removed** (not needed for automation)
+- No bookmarks bar, no password manager, no autofill, no sync
+
 ## Files
 
 ```
 ├── Dockerfile              # Custom image: Chrome upgrade + socat + policy fix
-├── docker-compose.yml      # Neko container config
+├── docker-compose.yml      # Neko container config + persistent volume
+├── policies.json           # Chrome managed policy (DevTools, uBlock, clean defaults)
 ├── .env.example            # Credentials template
 ├── google-chrome.conf      # Supervisord: Chrome stable with CDP flags
 └── cdp-proxy.conf          # Supervisord: socat CDP proxy
