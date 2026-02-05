@@ -47,7 +47,6 @@ Frank (or anyone) can watch the automation live at `https://your-domain/` via We
 ## Quick Start
 
 ```bash
-cd neko/
 cp .env.example .env
 # Edit .env with your Neko credentials
 docker compose build
@@ -104,7 +103,6 @@ Once the Neko base image ships Chrome 145+ (check with `docker run --rm ghcr.io/
 ## Files
 
 ```
-neko/
 ├── Dockerfile              # Custom image: Chrome Beta + socat + policy fix
 ├── docker-compose.yml      # Neko container config
 ├── .env.example            # Credentials template
