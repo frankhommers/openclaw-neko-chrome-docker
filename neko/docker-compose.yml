@@ -19,7 +19,7 @@ services:
       # WebRTC
       NEKO_EPR: "52000-52100"
       NEKO_ICELITE: "1"
-      NEKO_NAT1TO1: "95.217.69.126"
+      NEKO_NAT1TO1: "${PUBLIC_IP}"  # Set to your server's public IP
 
       # Optional quality defaults
       NEKO_CAPTURE_VIDEO_CODEC: "vp8"
@@ -27,7 +27,7 @@ services:
 
     ports:
       - "52000-52100:52000-52100/udp"
-      - "127.0.0.1:9222:9223"   # CDP proxy (0.0.0.0:9223 → 127.0.0.1:9222)
+      - "127.0.0.1:9222:9223"   # CDP proxy (container 9223 → host 9222)
 
     networks:
       - proxy
@@ -36,7 +36,7 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=proxy"
 
-      - "traefik.http.routers.neko.rule=Host(`browser.aivy.hommers.it`)"
+      - "traefik.http.routers.neko.rule=Host(`${NEKO_DOMAIN}`)"
       - "traefik.http.routers.neko.entrypoints=websecure"
       - "traefik.http.routers.neko.tls=true"
       - "traefik.http.routers.neko.tls.certresolver=letsencrypt"
