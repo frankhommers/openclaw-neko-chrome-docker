@@ -1,6 +1,6 @@
 services:
   neko:
-    image: ghcr.io/m1k1o/neko/chromium:latest
+    build: .
     container_name: neko
     restart: unless-stopped
     shm_size: "2gb"
@@ -8,10 +8,6 @@ services:
       - SYS_ADMIN
     env_file:
       - .env
-    volumes:
-      - ./chromium.conf:/etc/neko/supervisord/chromium.conf:ro
-      - ./cdp-proxy.py:/opt/cdp-proxy.py:ro
-      - ./cdp-proxy.conf:/etc/neko/supervisord/cdp-proxy.conf:ro
     environment:
       # Desktop / stream
       NEKO_DESKTOP_SCREEN: "1920x1080@30"
@@ -27,7 +23,7 @@ services:
 
     ports:
       - "52000-52100:52000-52100/udp"
-      - "127.0.0.1:9222:9223"   # CDP proxy (container 9223 → host 9222)
+      - "127.0.0.1:9222:9223"   # socat CDP proxy (container 9223 → Chrome 9222)
 
     networks:
       - proxy

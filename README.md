@@ -1,126 +1,116 @@
 # openclaw-neko-chrome-docker
 
-Docker setup for [OpenClaw](https://github.com/openclaw/openclaw) browser automation: **Neko** (interactive WebRTC browser) + **headless Chrome** (Playwright/CDP automation).
+Docker setup for [OpenClaw](https://github.com/openclaw/openclaw) browser automation using **Neko** — a visible, interactive browser via WebRTC with full Playwright/CDP automation support.
 
 ## The Problem
 
-[Neko](https://github.com/m1k1o/neko) is great for interactive browser access via WebRTC, but its bundled Chromium version often lags behind what Playwright requires. For example, Playwright 1.58.1 needs Chrome 145+, while Neko ships Chromium 139. This causes `connectOverCDP` to hang on the WebSocket handshake due to protocol version mismatch.
+[Neko](https://github.com/m1k1o/neko) is great for interactive browser access via WebRTC, but:
+
+1. Its bundled Chrome version lags behind what Playwright requires (e.g. Playwright 1.58.1 needs Chrome 145+, Neko ships 143)
+2. Chrome in non-headless mode binds CDP to `127.0.0.1` only — can't be reached from outside the container
+3. Neko's managed policy disables DevTools/CDP entirely (`DeveloperToolsAvailability: 2`)
 
 ## The Solution
 
-Run a separate **headless Chrome container** alongside Neko:
+A custom Dockerfile that fixes all three issues:
 
-- **Neko** → interactive browsing via WebRTC (visual access, debugging)
-- **Headless Chrome** → Playwright/CDP automation (screenshots, snapshots, page interaction)
+- **Installs Chrome Beta** (145+) alongside the base image's Chrome for Playwright compatibility
+- **Socat CDP proxy** forwards `0.0.0.0:9223` → `127.0.0.1:9222` inside the container
+- **Fixes Chrome policy** to re-enable DevTools/CDP in both stable and beta policy directories
 
-Both containers run independently. OpenClaw connects to the headless Chrome container for automation while Neko remains available for interactive use.
+The result: a single Neko container that serves both interactive WebRTC browsing **and** Playwright automation. No separate headless Chrome needed.
 
 ## Architecture
 
 ```
-OpenClaw Gateway (Playwright)
+OpenClaw Gateway (Playwright 1.58.1)
     │
-    ├─ CDP ──→ localhost:9223 ──→ headless-chrome (Chrome 145+)
-    │          Automation: screenshots, snapshots, actions
-    │
-    └─ WebRTC → your-domain.com ──→ neko (Chromium)
-                Interactive: visual browsing, debugging
+    └─ CDP ──→ host 127.0.0.1:9222
+                  │
+                  └─→ container 0.0.0.0:9223 (socat proxy)
+                        │
+                        └─→ Chrome Beta 127.0.0.1:9222 (non-headless)
+                              │
+                              └─→ visible in Neko WebRTC UI
 ```
+
+Frank (or anyone) can watch the automation live at `https://your-domain/` via WebRTC.
 
 ## Ports
 
-| Port | Protocol | Container | Purpose |
-|------|----------|-----------|---------|
-| `9223` | TCP | headless-chrome | CDP endpoint for Playwright automation |
-| `9222` | TCP | neko | CDP proxy (Neko's internal Chromium, optional) |
-| `8080` | TCP | neko | Web UI (behind reverse proxy) |
-| `52000-52100` | UDP | neko | WebRTC media streams |
-
-> **Note:** Both CDP ports bind to `127.0.0.1` only (not exposed publicly).
+| Port | Protocol | Purpose |
+|------|----------|---------|
+| `9222` | TCP (host, localhost only) | CDP endpoint for Playwright |
+| `8080` | TCP | Neko Web UI (put behind reverse proxy) |
+| `52000-52100` | UDP | WebRTC media streams |
 
 ## Quick Start
-
-### 1. Headless Chrome (automation)
-
-```bash
-cd headless-chrome/
-docker compose up -d
-```
-
-That's it. CDP available at `127.0.0.1:9223`.
-
-### 2. Neko (interactive browser)
 
 ```bash
 cd neko/
 cp .env.example .env
-# Edit .env with your credentials
+# Edit .env with your Neko credentials
+docker compose build
 docker compose up -d
 ```
 
-Neko requires:
-- A reverse proxy (e.g. Traefik) with the `proxy` Docker network
-- UDP ports 52000-52100 open for WebRTC
-- DNS pointing to your server
-- Update `NEKO_NAT1TO1` in `docker-compose.yml` to your server's public IP
-
-### 3. OpenClaw config
-
-Add to your `openclaw.json`:
+### OpenClaw config
 
 ```json
 {
   "browser": {
-    "defaultProfile": "neko",
+    "enabled": true,
+    "executablePath": "/usr/bin/google-chrome-beta",
     "attachOnly": true,
+    "defaultProfile": "neko",
     "profiles": {
       "neko": {
-        "cdpUrl": "http://127.0.0.1:9223"
+        "cdpUrl": "http://127.0.0.1:9222"
       }
     }
   }
 }
 ```
 
-> The profile name is arbitrary. `cdpUrl` must point to the **headless Chrome** port (9223), not Neko's CDP port (9222).
+### Prerequisites
 
-## Neko Customization
+- Docker with compose v2
+- A reverse proxy (e.g. Traefik) on a shared `proxy` network for the Web UI
+- UDP ports 52000-52100 open for WebRTC
+- Update `NEKO_NAT1TO1` in `docker-compose.yml` to your server's public IP
 
-This setup includes custom supervisord configs for Neko:
+## Key Discoveries
 
-- **`chromium.conf`** — Enables CDP (`--remote-debugging-port=9222`) on Neko's bundled Chromium
-- **`google-chrome.conf`** — Alternative config if you install Google Chrome inside Neko
-- **`cdp-proxy.py`** — TCP proxy exposing Chromium's CDP port to the Docker host
-- **`cdp-proxy.conf`** — Supervisord config for the CDP proxy
+These cost us hours to figure out, so documenting them here:
 
-These make Neko's internal browser accessible via CDP for debugging. For automation, use the headless Chrome container instead.
+### Chrome non-headless always binds CDP to 127.0.0.1
+`--remote-debugging-address=0.0.0.0` is **ignored** in non-headless mode. Chrome always binds to loopback. The socat proxy is the lightest-weight workaround.
+
+### Chrome Beta reads policies from a different directory
+- Chrome stable: `/etc/opt/chrome/policies/managed/`
+- Chrome Beta: `/etc/opt/chrome-beta/policies/managed/`
+
+Neko sets `DeveloperToolsAvailability: 2` (disabled) in the stable dir. If you install Beta, you must also create the policy in the Beta dir with value `0`.
+
+### Non-default user-data-dir required
+Chrome refuses `--remote-debugging-port` with the default profile data directory. The supervisord config uses `--user-data-dir=/home/neko/.config/google-chrome-cdp`.
+
+### When to switch back to Chrome stable
+Once the Neko base image ships Chrome 145+ (check with `docker run --rm ghcr.io/m1k1o/neko/google-chrome:latest google-chrome-stable --version`), you can:
+1. Remove `google-chrome-beta` from the Dockerfile
+2. Change `command` in `google-chrome.conf` to `/usr/bin/google-chrome-stable`
+3. Remove the Beta policy directory creation
 
 ## Files
 
 ```
-├── headless-chrome/
-│   └── docker-compose.yml        # Chrome 145+ headless container
-├── neko/
-│   ├── docker-compose.yml        # Neko interactive browser
-│   ├── .env.example              # Credentials template
-│   ├── chromium.conf             # Supervisord: Chromium with CDP
-│   ├── cdp-proxy.py              # TCP proxy for CDP access
-│   ├── cdp-proxy.conf            # Supervisord: CDP proxy process
-│   └── google-chrome.conf        # Alternative: Google Chrome config
-├── .gitignore
-└── README.md
+neko/
+├── Dockerfile              # Custom image: Chrome Beta + socat + policy fix
+├── docker-compose.yml      # Neko container config
+├── .env.example            # Credentials template
+├── google-chrome.conf      # Supervisord: Chrome Beta with CDP flags
+└── cdp-proxy.conf          # Supervisord: socat CDP proxy
 ```
-
-## Why not just use headless Chrome?
-
-Neko gives you a **visual browser** you can access from anywhere via WebRTC. This is invaluable for:
-
-- Debugging what the automation agent "sees"
-- Manual intervention when automation gets stuck
-- Interactive browsing sessions (login flows, CAPTCHAs)
-- Shared browser access with team members
-
-The headless Chrome container handles the automated work; Neko handles the human side.
 
 ## License
 
