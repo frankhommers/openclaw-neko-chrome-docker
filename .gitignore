@@ -1,5 +1,11 @@
 # Secrets
 .env
 
+# Local deployment overrides
+docker-compose.override.yml
+Dockerfile.local
+neko.yaml
+wg-route.conf
+
 # OS
 .DS_Store

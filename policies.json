@@ -16,5 +16,6 @@
   "ExtensionInstallAllowlist": [
     "cjpalhdlnbpafiamejdnhcphjbkeiagm"
   ],
-  "ExtensionInstallBlocklist": []
+  "ExtensionInstallBlocklist": [],
+  "CommandLineFlagSecurityWarningsEnabled": false
 }
