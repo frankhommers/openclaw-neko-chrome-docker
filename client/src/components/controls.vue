@@ -53,15 +53,6 @@
         @click.stop.prevent="toggleMedia"
       />
     </li>
-    <li>
-      <div class="volume">
-        <i
-          :class="[volume === 0 || muted ? 'fa-volume-mute' : 'fa-volume-up', 'fas']"
-          @click.stop.prevent="toggleMute"
-        />
-        <input type="range" min="0" max="100" v-model="volume" />
-      </div>
-    </li>
   </ul>
 </template>
 

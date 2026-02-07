@@ -28,9 +28,6 @@
         <div v-if="!playing && playable" class="player-overlay" @click.stop.prevent="playAndUnmute">
           <i class="fas fa-play-circle" />
         </div>
-        <div v-else-if="mutedOverlay && muted" class="player-overlay" @click.stop.prevent="unmute">
-          <i class="fas fa-volume-up" />
-        </div>
         <div ref="aspect" class="player-aspect" />
       </div>
       <ul v-if="!fullscreen && !hideControls" class="video-menu top">
