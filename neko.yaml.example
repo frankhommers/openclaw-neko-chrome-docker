@@ -1,0 +1,39 @@
+desktop:
+  screen: "1920x1080@60"
+
+member:
+  provider: "multiuser"
+  multiuser:
+    admin_password: "changeme-admin"
+    user_password: "changeme"
+
+plugins:
+  enabled: false
+  filetransfer.enabled: false
+  chat.enabled: false
+  chat.can_send: true
+  chat.can_receive: true
+
+session:
+  merciful_reconnect: true
+  implicit_hosting: false
+  cookie:
+    enabled: false
+
+# Audio is disabled at Chrome level (--mute-audio, --disable-audio-output,
+# --disable-audio-input) and PulseAudio is killed in the Dockerfile.
+# No neko.yaml audio config needed.
+
+capture:
+  video:
+    codec: "vp8"
+  broadcast:
+    autostart: false
+  screencast:
+    enabled: false
+
+webrtc:
+  epr: "52000-52100"
+  icelite: true
+  nat1to1:
+    - "1.2.3.4"  # Your server's public IP

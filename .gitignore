@@ -7,5 +7,15 @@ Dockerfile.local
 neko.yaml
 wg-route.conf
 
+# Client build artifacts
+client/node_modules/
+client/dist/
+
+# Neko CSS override (replaced by custom Vue client)
+neko-hide-ui.css
+
+# Plans / notes
+PLAN-*.md
+
 # OS
 .DS_Store

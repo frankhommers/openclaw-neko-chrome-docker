@@ -122,15 +122,29 @@ The Dockerfile replaces Neko's restrictive Chrome policy with a clean one (`poli
 - **SponsorBlock removed** (not needed for automation)
 - No bookmarks bar, no password manager, no autofill, no sync
 
+## Audio
+
+Audio is **force-disabled** at two levels — no neko.yaml config needed:
+
+1. **Chrome flags**: `--mute-audio`, `--disable-audio-output`, `--disable-audio-input`
+2. **PulseAudio killed**: Dockerfile sets `autospawn = no` and `daemon-binary = /bin/true`
+
+## Neko Lite Client
+
+The `client/` directory contains a stripped-down Vue frontend (based on Neko's original client) with chat, emotes, file transfer, members list, sidebar, and about dialog removed. The Dockerfile uses a multi-stage build to compile and serve this instead of the default Neko UI.
+
 ## Files
 
 ```
-├── Dockerfile              # Custom image: Chrome upgrade + socat + policy fix
+├── Dockerfile              # Multi-stage: Vue build + Chrome upgrade + socat + policy
 ├── docker-compose.yml      # Neko container config + persistent volume
+├── docker-compose.yml.example
+├── neko.yaml.example       # Neko config template
 ├── policies.json           # Chrome managed policy (DevTools, uBlock, clean defaults)
 ├── .env.example            # Credentials template
 ├── google-chrome.conf      # Supervisord: Chrome stable with CDP flags
-└── cdp-proxy.conf          # Supervisord: socat CDP proxy
+├── cdp-proxy.conf          # Supervisord: socat CDP proxy
+└── client/                 # Neko Lite Vue frontend (stripped)
 ```
 
 ## License

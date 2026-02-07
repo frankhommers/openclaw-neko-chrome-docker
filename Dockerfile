@@ -1,16 +1,21 @@
-FROM ghcr.io/m1k1o/neko/google-chrome:latest
+# Stage 1: Build Vue client
+FROM node:20-alpine AS client-build
+COPY client/ /build/
+WORKDIR /build
+RUN npm ci && npm run build
 
-# Upgrade Chrome stable to latest available + install socat for CDP proxy
+# Stage 2: Final image
+FROM ghcr.io/m1k1o/neko/google-chrome:3
+RUN rm -rf /var/www/*
+COPY --from=client-build /build/dist/ /var/www/
 RUN apt-get update -qq && \
     apt-get install -y -qq socat && \
     apt-get install -y -qq --only-upgrade google-chrome-stable && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Disable audio: kill PulseAudio config so nothing tries to connect
+RUN echo "autospawn = no" > /etc/pulse/client.conf && \
+    echo "daemon-binary = /bin/true" >> /etc/pulse/client.conf
 
-# Replace Neko's restrictive Chrome policy with our clean one
-# (enables DevTools/CDP, keeps uBlock Origin, removes SponsorBlock)
 COPY policies.json /etc/opt/chrome/policies/managed/policies.json
-
-# Override supervisord configs
 COPY google-chrome.conf /etc/neko/supervisord/google-chrome.conf
 COPY cdp-proxy.conf /etc/neko/supervisord/cdp-proxy.conf
