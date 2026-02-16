@@ -29,7 +29,7 @@ services:
       - "traefik.http.routers.neko.tls.certresolver=letsencrypt"
 
       - "traefik.http.routers.neko.middlewares=neko-ipwhitelist"
-      - "traefik.http.middlewares.neko-ipwhitelist.ipallowlist.sourcerange=YOUR_IP_HERE/32"
+      - "traefik.http.middlewares.neko-ipwhitelist.ipallowlist.sourcerange=${ALLOWED_IPS}"
 
       - "traefik.http.services.neko.loadbalancer.server.port=8080"
 
