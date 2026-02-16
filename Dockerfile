@@ -9,9 +9,13 @@ FROM ghcr.io/m1k1o/neko/google-chrome:3
 RUN rm -rf /var/www/*
 COPY --from=client-build /build/dist/ /var/www/
 RUN apt-get update -qq && \
-    apt-get install -y -qq socat && \
+    apt-get install -y -qq socat iproute2 && \
     apt-get install -y -qq --only-upgrade google-chrome-stable && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
 # Disable audio: kill PulseAudio config so nothing tries to connect
 RUN echo "autospawn = no" > /etc/pulse/client.conf && \
     echo "daemon-binary = /bin/true" >> /etc/pulse/client.conf
